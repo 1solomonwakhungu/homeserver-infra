@@ -2,8 +2,10 @@
 # This file contains common configuration shared across all racks
 
 # Configure Terragrunt to use Terraform Cloud remote backend
+# The cloud block in the generated terraform configuration is the primary backend config
+# This remote_state block ensures Terragrunt is aware of the remote state location
 remote_state {
-  backend = "cloud"
+  backend = "remote"
   config = {
     hostname     = "app.terraform.io"
     organization = "solohomeserver-org"

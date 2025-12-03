@@ -427,6 +427,13 @@ terragrunt output -json
 - **Verify Terragrunt version**: Use Terragrunt >= 0.40
 - **Check file paths**: Ensure `terragrunt.hcl` includes are correct
 
+### Terraform Cloud Issues
+
+- **Authentication**: Run `terraform login` to authenticate with Terraform Cloud
+- **Organization Access**: Ensure you have access to `solohomeserver-org` organization
+- **Workspace Creation**: Workspaces are auto-created on first `terragrunt init`
+- **State Locking**: If state is locked, check Terraform Cloud UI for running operations
+
 ## Best Practices
 
 1. **VMID Planning**: Plan your VMID ranges to avoid conflicts:
