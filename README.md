@@ -93,6 +93,36 @@ This creates:
    chmod +x terragrunt_linux_amd64
    sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
    ```
+4. **Terraform Cloud Account**: Access to the `solohomeserver-org` organization
+
+### Setting Up Terraform Cloud
+
+This infrastructure uses **Terraform Cloud** for remote state management. Each rack has its own workspace:
+
+- `top-rack` - Workspace for top-rack VMs
+- `middle-rack` - Workspace for middle-rack VMs
+- `bottom-rack` - Workspace for bottom-rack VMs
+
+#### Initial Setup
+
+1. **Login to Terraform Cloud**:
+   ```bash
+   terraform login
+   ```
+   This will open your browser to authenticate with Terraform Cloud.
+
+2. **Verify Organization Access**:
+   Ensure you have access to the `solohomeserver-org` organization in Terraform Cloud.
+
+3. **Workspaces are Auto-Created**:
+   Workspaces are automatically created when you first run `terragrunt init` or `terragrunt apply` in each rack directory.
+
+#### Using Terraform Cloud
+
+- **State Storage**: All Terraform state is stored remotely in Terraform Cloud
+- **Workspace Isolation**: Each rack manages its own isolated workspace
+- **State Locking**: Automatic state locking prevents concurrent modifications
+- **State History**: Full history of state changes is available in Terraform Cloud UI
 
 ### Setting Up Proxmox API Credentials
 
@@ -115,6 +145,21 @@ export PM_API_TOKEN_SECRET="your-token-secret"
 
 ## Quick Start
 
+### First-Time Setup
+
+1. **Login to Terraform Cloud**:
+   ```bash
+   terraform login
+   ```
+
+2. **Initialize and Deploy**:
+   ```bash
+   cd infra/racks/top-rack
+   terragrunt init
+   terragrunt plan
+   terragrunt apply
+   ```
+
 ### Deploy a Single Rack
 
 ```bash
@@ -124,6 +169,8 @@ terragrunt plan
 terragrunt apply
 ```
 
+**Note**: The first time you run `terragrunt init`, Terraform Cloud will automatically create the workspace if it doesn't exist.
+
 ### Deploy All Racks
 
 ```bash
@@ -132,6 +179,8 @@ terragrunt run-all init
 terragrunt run-all plan
 terragrunt run-all apply
 ```
+
+This will deploy all racks, each to its own Terraform Cloud workspace.
 
 ## Adding a New VM
 
@@ -395,7 +444,7 @@ terragrunt output -json
 
 5. **Version Control**: Keep `terragrunt.hcl` files in Git (never commit secrets)
 
-6. **State Management**: Consider using remote state backend for production
+6. **State Management**: State is automatically managed in Terraform Cloud - no local state files
 
 ## Provider Documentation
 

@@ -1,22 +1,34 @@
 # Root Terragrunt configuration
 # This file contains common configuration shared across all racks
 
-# Configure Terragrunt to automatically store tfstate files
+# Configure Terragrunt to use Terraform Cloud remote backend
 remote_state {
-  backend = "local"
+  backend = "cloud"
   config = {
-    path = "${get_parent_terragrunt_dir()}/.terraform/${path_relative_to_include()}/terraform.tfstate"
+    hostname     = "app.terraform.io"
+    organization = "solohomeserver-org"
+    workspaces {
+      name = basename(get_terragrunt_dir())
+    }
   }
 }
 
-# Generate Terraform provider configuration
+# Generate Terraform provider configuration with Terraform Cloud backend
 generate "provider" {
   path      = "provider.tf"
   if_exists = "overwrite_terragrunt"
   contents  = <<EOF
 terraform {
   required_version = ">= 1.0"
-  
+
+  cloud {
+    organization = "solohomeserver-org"
+
+    workspaces {
+      name = "${basename(get_terragrunt_dir())}"
+    }
+  }
+
   required_providers {
     proxmox = {
       source  = "telmate/proxmox"
