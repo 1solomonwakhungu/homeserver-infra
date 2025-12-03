@@ -26,6 +26,7 @@ infra/
 ### 1. Racks as Environments
 
 Each **rack** is a Terragrunt environment that represents a Proxmox node:
+
 - **top-rack**: Deploys VMs to `pvetop` node
 - **middle-rack**: Deploys VMs to `pvemiddle` node
 - **bottom-rack**: Deploys VMs to `pve` node (reserved for future use)
@@ -65,6 +66,7 @@ inputs = {
 ### 4. Example: Scaling VMs
 
 If you define:
+
 ```hcl
 "api" = {
   count      = 3
@@ -75,6 +77,7 @@ If you define:
 ```
 
 This creates:
+
 - `api-0` with VMID `300`
 - `api-1` with VMID `301`
 - `api-2` with VMID `302`
@@ -84,15 +87,17 @@ This creates:
 1. **Proxmox Access**: API access to your Proxmox cluster
 2. **Terraform**: Install Terraform (>= 1.0)
 3. **Terragrunt**: Install Terragrunt (>= 0.40)
+
    ```bash
    # macOS
    brew install terragrunt
-   
+
    # Linux
    wget https://github.com/gruntwork-io/terragrunt/releases/download/v0.50.0/terragrunt_linux_amd64
    chmod +x terragrunt_linux_amd64
    sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
    ```
+
 4. **Terraform Cloud Account**: Access to the `solohomeserver-org` organization
 
 ### Setting Up Terraform Cloud
@@ -106,9 +111,11 @@ This infrastructure uses **Terraform Cloud** for remote state management. Each r
 #### Initial Setup
 
 1. **Login to Terraform Cloud**:
+
    ```bash
    terraform login
    ```
+
    This will open your browser to authenticate with Terraform Cloud.
 
 2. **Verify Organization Access**:
@@ -148,6 +155,7 @@ export PM_API_TOKEN_SECRET="your-token-secret"
 ### First-Time Setup
 
 1. **Login to Terraform Cloud**:
+
    ```bash
    terraform login
    ```
@@ -437,14 +445,17 @@ terragrunt output -json
 ## Best Practices
 
 1. **VMID Planning**: Plan your VMID ranges to avoid conflicts:
+
    - Top rack: 100-199
    - Middle rack: 200-299
    - Bottom rack: 300-399
 
 2. **Naming Convention**: Use descriptive names that indicate purpose:
+
    - `web-main`, `api-cluster`, `db-primary`
 
 3. **Tags**: Use consistent tagging for filtering:
+
    - `rack=top`, `role=webserver`, `environment=production`
 
 4. **Templates**: Create and maintain cloud-init ready templates
@@ -513,6 +524,6 @@ inputs = {
 ```
 
 This configuration will create:
+
 - 2 webserver VMs (web-0, web-1) with VMIDs 200, 201
 - 1 database VM (db) with VMID 250
-
