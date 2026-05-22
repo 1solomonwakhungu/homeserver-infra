@@ -96,7 +96,7 @@ Live rack lockfiles are committed under `infra/racks/*/.terraform.lock.hcl`. Whe
 for rack in infra/racks/*; do (cd "$rack" && terragrunt init -backend=false -input=false -upgrade); done
 ```
 
-Review and commit the resulting lockfile diffs with the provider constraint change. Routine validation uses `-lockfile=readonly` so CI fails if generated rack stacks would select provider versions that are not already locked.
+Review and commit the resulting lockfile diffs with the provider constraint change. Routine validation uses `-lockfile=readonly` so CI fails if generated rack stacks would select provider versions that are not already locked. Lockfiles are generated with both `windows_amd64` and `linux_amd64` provider hashes so local Windows validation and Ubuntu GitHub Actions validation use the same selected provider version.
 
 Run these when installed:
 

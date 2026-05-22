@@ -52,7 +52,7 @@ State is configured only by the Terragrunt-generated `backend.tf`. The generated
 
 The module pins `telmate/proxmox ~> 2.9`. Validation currently resolves `2.9.14`; no `~> 3.0` release was available from the Terraform Registry at implementation time. The resource syntax uses the 2.9 schema: `cores`, `disk`, `network`, `desc`, `onboot`, and `cloudinit_cdrom_storage`.
 
-Provider lockfiles are committed for the reusable module and for every live rack stack. The rack lockfiles are generated with backendless Terragrunt init and enforced in CI with `terraform init -lockfile=readonly` through Terragrunt. This keeps generated rack stacks reproducible even though their generated `backend.tf`, `provider.tf`, and `variables.tf` files are not committed.
+Provider lockfiles are committed for the reusable module and for every live rack stack. The rack lockfiles are generated with backendless Terragrunt init, include `windows_amd64` and `linux_amd64` provider hashes, and are enforced in CI with `terraform init -lockfile=readonly` through Terragrunt. This keeps generated rack stacks reproducible even though their generated `backend.tf`, `provider.tf`, and `variables.tf` files are not committed.
 
 Network interface configuration is managed by Terraform. The module intentionally does not ignore `network` drift, so manual bridge/model changes in Proxmox will appear in future plans and can be reviewed or reverted through code.
 
