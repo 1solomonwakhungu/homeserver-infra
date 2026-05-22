@@ -44,10 +44,4 @@ resource "proxmox_vm_qemu" "vm" {
 
   tags   = length(var.tags) > 0 ? join(";", var.tags) : ""
   onboot = var.onboot
-
-  lifecycle {
-    ignore_changes = [
-      network,
-    ]
-  }
 }

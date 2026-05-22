@@ -42,8 +42,10 @@ More detail: [docs/architecture.md](docs/architecture.md).
    export PM_API_URL="https://pve.example.invalid:8006/api2/json"
    export PM_API_TOKEN_ID="terraform@pve!homeserver"
    export PM_API_TOKEN_SECRET="<redacted-token-secret>"
-   export PM_TLS_INSECURE="true"
+   export PM_TLS_INSECURE="false"
    ```
+
+   If the homelab Proxmox API uses a self-signed certificate and you explicitly accept that risk, set `PM_TLS_INSECURE="true"` for that shell/session.
 
    Password auth is also supported:
 
@@ -51,7 +53,7 @@ More detail: [docs/architecture.md](docs/architecture.md).
    export PM_API_URL="https://pve.example.invalid:8006/api2/json"
    export PM_USER="terraform@pve"
    export PM_PASS="<redacted-password>"
-   export PM_TLS_INSECURE="true"
+   export PM_TLS_INSECURE="false"
    ```
 
 3. Review a single rack.
@@ -77,6 +79,7 @@ terraform -chdir=infra/modules/vm fmt -check
 terraform -chdir=infra/modules/vm init -backend=false -input=false
 terraform -chdir=infra/modules/vm validate
 terragrunt hclfmt --terragrunt-check
+for rack in infra/racks/*; do (cd "$rack" && terragrunt init -backend=false -input=false -lockfile=readonly && terraform fmt -check && terragrunt validate-inputs && terragrunt validate); done
 ```
 
 Optional checks when tools are installed:
@@ -98,6 +101,8 @@ Terragrunt owns the backend configuration by generating `backend.tf` from [infra
 - `bottom-rack`
 
 Secrets are supplied through environment variables and marked sensitive in Terraform variable declarations. Do not commit `.tfvars`, Terraform state, plan files, provider credentials, or generated `.terraform` directories.
+
+Rack stack `.terraform.lock.hcl` files are committed deliberately. CI runs backendless rack init with `-lockfile=readonly`, so provider upgrades require an intentional lockfile refresh rather than happening implicitly during validation.
 
 ## Examples
 

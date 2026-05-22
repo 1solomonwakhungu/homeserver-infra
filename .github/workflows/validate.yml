@@ -40,6 +40,25 @@ jobs:
       - name: Terraform validate module
         run: terraform -chdir=infra/modules/vm validate
 
+      - name: Terragrunt validate rack stacks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for stack in infra/racks/*; do
+            if [[ -d "${stack}" ]]; then
+              echo "::group::${stack}"
+              (
+                cd "${stack}"
+                terragrunt init -backend=false -input=false -lockfile=readonly --terragrunt-non-interactive
+                terraform fmt -check
+                terragrunt validate-inputs --terragrunt-non-interactive
+                terragrunt validate --terragrunt-non-interactive
+              )
+              echo "::endgroup::"
+            fi
+          done
+
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
 

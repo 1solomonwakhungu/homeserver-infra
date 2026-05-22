@@ -6,7 +6,6 @@ infra/racks/**/main.tf
 infra/racks/**/provider.tf
 infra/racks/**/proxmox_variables.tf
 infra/racks/**/variables.tf
-infra/racks/**/.terraform.lock.hcl
 
 # .tfstate files
 *.tfstate

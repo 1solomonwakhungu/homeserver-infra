@@ -17,11 +17,11 @@ module "vms" {
   for_each = var.vms
 
   # VM Configuration
-  node        = each.value.node
+  node           = each.value.node
   instance_count = each.value.instance_count
-  vmid_start  = each.value.vmid_start
-  name        = each.value.name
-  description = try(each.value.description, "")
+  vmid_start     = each.value.vmid_start
+  name           = each.value.name
+  description    = try(each.value.description, "")
 
   # VM Resources
   cpu     = try(each.value.cpu, 2)
@@ -41,17 +41,17 @@ module "vms" {
   network_model  = try(each.value.network_model, "virtio")
 
   # Cloud-init
-  ciuser     = try(each.value.ciuser, "ubuntu")
-  cipassword = try(each.value.cipassword, "")
-  ipconfig0  = try(each.value.ipconfig0, "ip=dhcp")
-  sshkeys    = try(each.value.sshkeys, "")
-  nameserver = try(each.value.nameserver, "")
+  ciuser       = try(each.value.ciuser, "ubuntu")
+  cipassword   = try(each.value.cipassword, "")
+  ipconfig0    = try(each.value.ipconfig0, "ip=dhcp")
+  sshkeys      = try(each.value.sshkeys, "")
+  nameserver   = try(each.value.nameserver, "")
   searchdomain = try(each.value.searchdomain, "")
 
   # Other settings
-  tags     = try(each.value.tags, [])
-  onboot   = try(each.value.onboot, false)
-  agent    = try(each.value.agent, 1)
+  tags   = try(each.value.tags, [])
+  onboot = try(each.value.onboot, false)
+  agent  = try(each.value.agent, 1)
 }
 EOF
 }
@@ -67,28 +67,28 @@ variable "vms" {
   description = "Map of VM definitions to deploy"
   type = map(object({
     instance_count = number
-    node        = string
-    vmid_start  = number
-    name        = string
-    description = optional(string, "")
-    cpu         = optional(number, 2)
-    memory      = optional(number, 4096)
-    disk_gb     = optional(number, 32)
-    disk_storage = optional(string, "local-lvm")
-    disk_format  = optional(string, "raw")
-    template     = optional(string)
-    full_clone   = optional(bool, true)
+    node           = string
+    vmid_start     = number
+    name           = string
+    description    = optional(string, "")
+    cpu            = optional(number, 2)
+    memory         = optional(number, 4096)
+    disk_gb        = optional(number, 32)
+    disk_storage   = optional(string, "local-lvm")
+    disk_format    = optional(string, "raw")
+    template       = optional(string)
+    full_clone     = optional(bool, true)
     network_bridge = optional(string, "vmbr0")
     network_model  = optional(string, "virtio")
-    ciuser        = optional(string, "ubuntu")
-    cipassword    = optional(string, "")
-    ipconfig0    = optional(string, "ip=dhcp")
-    sshkeys      = optional(string, "")
-    nameserver   = optional(string, "")
-    searchdomain = optional(string, "")
-    tags         = optional(list(string), [])
-    onboot       = optional(bool, false)
-    agent        = optional(number, 1)
+    ciuser         = optional(string, "ubuntu")
+    cipassword     = optional(string, "")
+    ipconfig0      = optional(string, "ip=dhcp")
+    sshkeys        = optional(string, "")
+    nameserver     = optional(string, "")
+    searchdomain   = optional(string, "")
+    tags           = optional(list(string), [])
+    onboot         = optional(bool, false)
+    agent          = optional(number, 1)
   }))
 }
 EOF

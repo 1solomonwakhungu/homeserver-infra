@@ -4,7 +4,10 @@
 export PM_API_URL="https://pve.example.invalid:8006/api2/json"
 export PM_API_TOKEN_ID="terraform@pve!homeserver"
 export PM_API_TOKEN_SECRET="<redacted-token-secret>"
-export PM_TLS_INSECURE="true"
+export PM_TLS_INSECURE="false"
+
+# Self-signed homelab certificate opt-in:
+# export PM_TLS_INSECURE="true"
 
 # Bootstrap/password auth alternative:
 # export PM_USER="terraform@pve"

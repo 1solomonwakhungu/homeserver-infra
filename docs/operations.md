@@ -54,8 +54,10 @@ Preferred API token environment variables:
 export PM_API_URL="https://pve.example.invalid:8006/api2/json"
 export PM_API_TOKEN_ID="terraform@pve!homeserver"
 export PM_API_TOKEN_SECRET="<redacted-token-secret>"
-export PM_TLS_INSECURE="true"
+export PM_TLS_INSECURE="false"
 ```
+
+Set `PM_TLS_INSECURE="true"` only when the target Proxmox API uses a self-signed certificate and the operator explicitly accepts bypassing TLS certificate verification for that session.
 
 Password authentication is available for bootstrap work only:
 
@@ -83,7 +85,18 @@ Run these before pushing:
 terraform -chdir=infra/modules/vm fmt -check
 terraform -chdir=infra/modules/vm validate
 terragrunt hclfmt --terragrunt-check
+for rack in infra/racks/*; do (cd "$rack" && terragrunt init -backend=false -input=false -lockfile=readonly && terraform fmt -check && terragrunt validate-inputs && terragrunt validate); done
 ```
+
+## Provider Lockfiles
+
+Live rack lockfiles are committed under `infra/racks/*/.terraform.lock.hcl`. When provider constraints change, refresh them intentionally:
+
+```bash
+for rack in infra/racks/*; do (cd "$rack" && terragrunt init -backend=false -input=false -upgrade); done
+```
+
+Review and commit the resulting lockfile diffs with the provider constraint change. Routine validation uses `-lockfile=readonly` so CI fails if generated rack stacks would select provider versions that are not already locked.
 
 Run these when installed:
 

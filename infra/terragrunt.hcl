@@ -86,9 +86,9 @@ variable "proxmox_api_token_secret" {
 }
 
 variable "proxmox_tls_insecure" {
-  description = "Allow self-signed Proxmox TLS certificates."
+  description = "Allow self-signed Proxmox TLS certificates. Keep false unless explicitly accepting homelab/self-signed TLS risk."
   type        = bool
-  default     = true
+  default     = false
 }
 EOF
 }
@@ -99,6 +99,6 @@ inputs = {
   proxmox_password         = get_env("PM_PASS", "")
   proxmox_api_token_id     = get_env("PM_API_TOKEN_ID", "")
   proxmox_api_token_secret = get_env("PM_API_TOKEN_SECRET", "")
-  proxmox_tls_insecure     = tobool(get_env("PM_TLS_INSECURE", "true"))
+  proxmox_tls_insecure     = tobool(get_env("PM_TLS_INSECURE", "false"))
 }
 
