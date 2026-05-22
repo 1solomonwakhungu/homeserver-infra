@@ -1,0 +1,11 @@
+# Copy the relevant exports into your shell or secret store.
+# Values below are sanitized placeholders.
+
+export PM_API_URL="https://pve.example.invalid:8006/api2/json"
+export PM_API_TOKEN_ID="terraform@pve!homeserver"
+export PM_API_TOKEN_SECRET="<redacted-token-secret>"
+export PM_TLS_INSECURE="true"
+
+# Bootstrap/password auth alternative:
+# export PM_USER="terraform@pve"
+# export PM_PASS="<redacted-password>"

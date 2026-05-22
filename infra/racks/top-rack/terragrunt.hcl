@@ -18,7 +18,7 @@ module "vms" {
 
   # VM Configuration
   node        = each.value.node
-  count       = each.value.count
+  instance_count = each.value.instance_count
   vmid_start  = each.value.vmid_start
   name        = each.value.name
   description = try(each.value.description, "")
@@ -51,7 +51,6 @@ module "vms" {
   # Other settings
   tags     = try(each.value.tags, [])
   onboot   = try(each.value.onboot, false)
-  vm_state = try(each.value.vm_state, "running")
   agent    = try(each.value.agent, 1)
 }
 EOF
@@ -67,7 +66,7 @@ generate "variables" {
 variable "vms" {
   description = "Map of VM definitions to deploy"
   type = map(object({
-    count       = number
+    instance_count = number
     node        = string
     vmid_start  = number
     name        = string
@@ -89,7 +88,6 @@ variable "vms" {
     searchdomain = optional(string, "")
     tags         = optional(list(string), [])
     onboot       = optional(bool, false)
-    vm_state     = optional(string, "running")
     agent        = optional(number, 1)
   }))
 }
@@ -100,18 +98,18 @@ EOF
 inputs = {
   vms = {
     "webserver-main" = {
-      count      = 1
-      node       = "pvetop"
-      vmid_start = 200
-      name       = "web-main"
-      cpu        = 2
-      memory     = 4096
-      disk_gb    = 32
-      template   = "local:vztmpl/ubuntu-22.04-cloudinit-template"
-      ciuser     = "solomon"
-      ipconfig0  = "ip=192.168.1.50/24,gw=192.168.1.1"
-      tags       = ["rack=top", "role=webserver"]
-      onboot     = true
+      instance_count = 1
+      node           = "pvetop"
+      vmid_start     = 200
+      name           = "web-main"
+      cpu            = 2
+      memory         = 4096
+      disk_gb        = 32
+      template       = "local:vztmpl/ubuntu-22.04-cloudinit-template"
+      ciuser         = "solomon"
+      ipconfig0      = "ip=192.168.1.50/24,gw=192.168.1.1"
+      tags           = ["rack=top", "role=webserver"]
+      onboot         = true
     }
   }
 }

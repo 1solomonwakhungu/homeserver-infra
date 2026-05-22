@@ -3,10 +3,15 @@ variable "node" {
   type        = string
 }
 
-variable "count" {
+variable "instance_count" {
   description = "Number of identical VMs to create"
   type        = number
   default     = 1
+
+  validation {
+    condition     = var.instance_count > 0
+    error_message = "instance_count must be greater than 0."
+  }
 }
 
 variable "vmid_start" {
@@ -126,12 +131,6 @@ variable "onboot" {
   description = "Start VM on boot"
   type        = bool
   default     = false
-}
-
-variable "vm_state" {
-  description = "Desired VM state: 'running', 'stopped', or 'started'"
-  type        = string
-  default     = "running"
 }
 
 variable "agent" {

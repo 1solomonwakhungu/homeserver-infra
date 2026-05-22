@@ -18,11 +18,6 @@ output "vm_ipv4_addresses" {
   value       = [for vm in proxmox_vm_qemu.vm : vm.default_ipv4_address]
 }
 
-output "vm_ipv6_addresses" {
-  description = "List of IPv6 addresses (if agent is enabled)"
-  value       = [for vm in proxmox_vm_qemu.vm : vm.default_ipv6_address]
-}
-
 output "vms" {
   description = "Map of VM details"
   value = {
@@ -31,7 +26,6 @@ output "vms" {
       name = vm.name
       node = vm.target_node
       ipv4 = vm.default_ipv4_address
-      ipv6 = vm.default_ipv6_address
     }
   }
 }

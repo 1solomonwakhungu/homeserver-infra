@@ -1,529 +1,153 @@
-# Proxmox Infrastructure with Terraform + Terragrunt
+# homeserver-infra
 
-This infrastructure uses **Terraform** and **Terragrunt** to manage Proxmox VMs across multiple racks (nodes). The system is designed to be flexible, allowing you to deploy multiple VMs per rack with unique configurations or scale identical VMs using the `count` parameter.
+Terraform and Terragrunt infrastructure for managing cloud-init Proxmox VMs in a small home server cluster. The repository is intentionally structured like production infrastructure: reusable Terraform modules, rack-level live stacks, remote state, CI validation, examples, and operator runbooks.
 
-## Directory Structure
+## Architecture
 
-```
+```text
 infra/
-├── terragrunt.hcl              # Root Terragrunt config (common provider settings)
-├── racks/
-│   ├── top-rack/               # VMs running on pvetop node
-│   │   └── terragrunt.hcl      # VM definitions for this rack
-│   ├── middle-rack/            # VMs running on pvemiddle node
-│   │   └── terragrunt.hcl      # VM definitions for this rack
-│   └── bottom-rack/            # VMs running on pve node (future)
-│       └── terragrunt.hcl      # VM definitions for this rack
-└── modules/
-    └── vm/                      # Reusable VM module
-        ├── main.tf
-        ├── variables.tf
-        └── outputs.tf
+|-- terragrunt.hcl                 # Root backend/provider/credential wiring
+|-- modules/
+|   `-- vm/                        # Reusable Proxmox VM module
+`-- racks/
+    |-- top-rack/terragrunt.hcl    # VMs targeting pvetop
+    |-- middle-rack/terragrunt.hcl # VMs targeting pvemiddle
+    `-- bottom-rack/terragrunt.hcl # Reserved rack, currently empty
 ```
 
-## How It Works
+Each rack is a Terragrunt stack with its own Terraform Cloud workspace. Rack files define a `vms` map, and each map entry calls `infra/modules/vm` with `for_each`. The module can create one VM or a small group of identical VMs by setting `instance_count`; VM names and IDs are derived from `name`, `vmid_start`, and the instance index.
 
-### 1. Racks as Environments
-
-Each **rack** is a Terragrunt environment that represents a Proxmox node:
-
-- **top-rack**: Deploys VMs to `pvetop` node
-- **middle-rack**: Deploys VMs to `pvemiddle` node
-- **bottom-rack**: Deploys VMs to `pve` node (reserved for future use)
-
-### 2. VM Definitions
-
-Each rack's `terragrunt.hcl` contains a `vms` map that defines all VMs to deploy:
-
-```hcl
-inputs = {
-  vms = {
-    "webserver-main" = {
-      count      = 1
-      node       = "pvetop"
-      vmid_start = 200
-      name       = "web-main"
-      # ... other config
-    }
-    "api" = {
-      count      = 3
-      node       = "pvetop"
-      vmid_start = 300
-      name       = "api"
-      # ... other config
-    }
-  }
-}
-```
-
-### 3. Dynamic VM Deployment
-
-- **Terragrunt** generates a `main.tf` that uses `for_each` to iterate over the `vms` map
-- Each VM definition calls the **VM module** with its configuration
-- The **VM module** uses `count` to create multiple identical VMs when `count > 1`
-- **VMIDs are calculated dynamically**: `vmid = vmid_start + count.index`
-
-### 4. Example: Scaling VMs
-
-If you define:
-
-```hcl
-"api" = {
-  count      = 3
-  vmid_start = 300
-  name       = "api"
-  # ...
-}
-```
-
-This creates:
-
-- `api-0` with VMID `300`
-- `api-1` with VMID `301`
-- `api-2` with VMID `302`
+More detail: [docs/architecture.md](docs/architecture.md).
 
 ## Prerequisites
 
-1. **Proxmox Access**: API access to your Proxmox cluster
-2. **Terraform**: Install Terraform (>= 1.0)
-3. **Terragrunt**: Install Terragrunt (>= 0.40)
+- Terraform `>= 1.5.0`
+- Terragrunt `>= 0.63`
+- Terraform Cloud access to organization `solohomeserver-org`
+- Proxmox API access with permissions to clone templates, create VMs, attach disks, configure cloud-init, and read VM state
+- A cloud-init-ready Proxmox template on each target node
+- Optional local tools for full parity with CI: `tflint`, `trivy`, and `terraform-docs`
 
-   ```bash
-   # macOS
-   brew install terragrunt
+## Quickstart
 
-   # Linux
-   wget https://github.com/gruntwork-io/terragrunt/releases/download/v0.50.0/terragrunt_linux_amd64
-   chmod +x terragrunt_linux_amd64
-   sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
-   ```
-
-4. **Terraform Cloud Account**: Access to the `solohomeserver-org` organization
-
-### Setting Up Terraform Cloud
-
-This infrastructure uses **Terraform Cloud** for remote state management. Each rack has its own workspace:
-
-- `top-rack` - Workspace for top-rack VMs
-- `middle-rack` - Workspace for middle-rack VMs
-- `bottom-rack` - Workspace for bottom-rack VMs
-
-#### Initial Setup
-
-1. **Login to Terraform Cloud**:
+1. Authenticate to Terraform Cloud.
 
    ```bash
    terraform login
    ```
 
-   This will open your browser to authenticate with Terraform Cloud.
-
-2. **Verify Organization Access**:
-   Ensure you have access to the `solohomeserver-org` organization in Terraform Cloud.
-
-3. **Workspaces are Auto-Created**:
-   Workspaces are automatically created when you first run `terragrunt init` or `terragrunt apply` in each rack directory.
-
-#### Using Terraform Cloud
-
-- **State Storage**: All Terraform state is stored remotely in Terraform Cloud
-- **Workspace Isolation**: Each rack manages its own isolated workspace
-- **State Locking**: Automatic state locking prevents concurrent modifications
-- **State History**: Full history of state changes is available in Terraform Cloud UI
-
-### Setting Up Proxmox API Credentials
-
-Set environment variables:
-
-```bash
-export PM_API_URL="https://your-proxmox-server:8006/api2/json"
-export PM_USER="terraform-prov@pve"
-export PM_PASS="your-password"
-export PM_TLS_INSECURE="true"  # For self-signed certificates
-```
-
-Or use API tokens:
-
-```bash
-export PM_API_URL="https://your-proxmox-server:8006/api2/json"
-export PM_API_TOKEN_ID="terraform-prov@pve!mytoken"
-export PM_API_TOKEN_SECRET="your-token-secret"
-```
-
-## Quick Start
-
-### First-Time Setup
-
-1. **Login to Terraform Cloud**:
+2. Export Proxmox credentials. Prefer API tokens for automation.
 
    ```bash
-   terraform login
+   export PM_API_URL="https://pve.example.invalid:8006/api2/json"
+   export PM_API_TOKEN_ID="terraform@pve!homeserver"
+   export PM_API_TOKEN_SECRET="<redacted-token-secret>"
+   export PM_TLS_INSECURE="true"
    ```
 
-2. **Initialize and Deploy**:
+   Password auth is also supported:
+
+   ```bash
+   export PM_API_URL="https://pve.example.invalid:8006/api2/json"
+   export PM_USER="terraform@pve"
+   export PM_PASS="<redacted-password>"
+   export PM_TLS_INSECURE="true"
+   ```
+
+3. Review a single rack.
+
    ```bash
    cd infra/racks/top-rack
    terragrunt init
    terragrunt plan
+   ```
+
+4. Apply only after the plan matches the intended VM lifecycle.
+
+   ```bash
    terragrunt apply
    ```
 
-### Deploy a Single Rack
+## Validation
+
+Local checks that do not require Proxmox credentials:
 
 ```bash
-cd infra/racks/top-rack
-terragrunt init
-terragrunt plan
-terragrunt apply
+terraform -chdir=infra/modules/vm fmt -check
+terraform -chdir=infra/modules/vm init -backend=false -input=false
+terraform -chdir=infra/modules/vm validate
+terragrunt hclfmt --terragrunt-check
 ```
 
-**Note**: The first time you run `terragrunt init`, Terraform Cloud will automatically create the workspace if it doesn't exist.
-
-### Deploy All Racks
+Optional checks when tools are installed:
 
 ```bash
-cd infra/racks
-terragrunt run-all init
-terragrunt run-all plan
-terragrunt run-all apply
+tflint --recursive
+trivy config --exit-code 1 --severity HIGH,CRITICAL .
+terraform-docs markdown table infra/modules/vm
 ```
 
-This will deploy all racks, each to its own Terraform Cloud workspace.
+CI runs formatting, module validation, Terragrunt formatting, TFLint, Trivy config scanning, and terraform-docs generation where feasible.
 
-## Adding a New VM
+## State And Secrets
 
-Edit the rack's `terragrunt.hcl` file and add a new entry to the `vms` map:
+Terragrunt owns the backend configuration by generating `backend.tf` from [infra/terragrunt.hcl](infra/terragrunt.hcl). Do not add a Terraform `cloud` block or a separate Terragrunt `remote_state` block next to it; Terraform supports only one state mode for a stack. The current backend is Terraform Cloud remote state with one workspace per rack:
+
+- `top-rack`
+- `middle-rack`
+- `bottom-rack`
+
+Secrets are supplied through environment variables and marked sensitive in Terraform variable declarations. Do not commit `.tfvars`, Terraform state, plan files, provider credentials, or generated `.terraform` directories.
+
+## Examples
+
+Scale a small stateless VM group:
 
 ```hcl
-inputs = {
-  vms = {
-    # ... existing VMs ...
+"api-workers" = {
+  instance_count = 3
+  node           = "pvetop"
+  vmid_start     = 310
+  name           = "api-worker"
+  cpu            = 2
+  memory         = 4096
+  disk_gb        = 32
+  template       = "ubuntu-2404-cloudinit"
+  ciuser         = "solomon"
+  ipconfig0      = "ip=dhcp"
+  tags           = ["rack=top", "role=api", "env=lab"]
+  onboot         = true
+}
+```
 
-    "new-vm" = {
-      count      = 1
-      node       = "pvetop"
-      vmid_start = 500
-      name       = "new-vm"
-      cpu        = 4
-      memory     = 8192
-      disk_gb    = 64
-      template   = "local:vztmpl/ubuntu-22.04-cloudinit-template"
-      ciuser     = "solomon"
-      ipconfig0  = "ip=192.168.1.100/24,gw=192.168.1.1"
-      tags       = ["rack=top", "role=app"]
-      onboot     = true
+Expected sanitized output shape:
+
+```json
+{
+  "vms": {
+    "0": {
+      "id": 310,
+      "name": "api-worker-0",
+      "node": "pvetop",
+      "ipv4": "192.0.2.10"
     }
   }
 }
 ```
 
-Then apply:
+Additional sample files are in [examples](examples).
 
-```bash
-cd infra/racks/top-rack
-terragrunt apply
-```
+## Operations
 
-## Scaling VMs with Count
+Common operator workflows are documented in [docs/operations.md](docs/operations.md), including adding VMs, changing VMID ranges, checking plans, handling state locks, and rotating Proxmox credentials.
 
-To deploy multiple identical VMs, set `count > 1`:
+## Teardown Warnings
 
-```hcl
-"api-cluster" = {
-  count      = 5              # Creates 5 identical VMs
-  node       = "pvetop"
-  vmid_start = 400            # VMIDs: 400, 401, 402, 403, 404
-  name       = "api"          # Names: api-0, api-1, api-2, api-3, api-4
-  cpu        = 2
-  memory     = 2048
-  disk_gb    = 20
-  template   = "local:vztmpl/ubuntu-22.04-cloudinit-template"
-  ciuser     = "solomon"
-  ipconfig0  = "ip=dhcp"
-  tags       = ["rack=top", "role=api"]
-}
-```
+`terragrunt destroy` deletes managed VMs. In Proxmox this can remove disks and cloud-init configuration for the affected VM resources. Read [docs/teardown.md](docs/teardown.md) before any destroy operation, export outputs first, and prefer destroying one rack at a time.
 
-## Dynamic VMID Calculation
+## Tradeoffs
 
-VMIDs are automatically calculated based on `vmid_start` and `count.index`:
-
-- **Formula**: `vmid = vmid_start + count.index`
-- **Example**: If `vmid_start = 300` and `count = 3`:
-  - First VM: `300 + 0 = 300`
-  - Second VM: `300 + 1 = 301`
-  - Third VM: `300 + 2 = 302`
-
-**Important**: Ensure `vmid_start` values don't overlap between different VM definitions to avoid conflicts.
-
-## VM Configuration Options
-
-Each VM definition supports the following options:
-
-### Required Fields
-
-- `count`: Number of identical VMs to create
-- `node`: Proxmox node name (e.g., "pvetop", "pvemiddle")
-- `vmid_start`: Starting VM ID (actual VMIDs = vmid_start + index)
-- `name`: Base name for VM(s) (if count > 1, becomes name-0, name-1, etc.)
-
-### Optional Fields
-
-- `description`: VM description (default: auto-generated)
-- `cpu`: CPU cores (default: 2)
-- `memory`: Memory in MB (default: 4096)
-- `disk_gb`: Disk size in GB (default: 32)
-- `disk_storage`: Storage pool (default: "local-lvm")
-- `disk_format`: Disk format (default: "raw")
-- `template`: Template to clone from (required for cloud-init)
-- `full_clone`: Full clone vs linked clone (default: true)
-- `network_bridge`: Network bridge (default: "vmbr0")
-- `network_model`: Network model (default: "virtio")
-- `ciuser`: Cloud-init user (default: "ubuntu")
-- `cipassword`: Cloud-init password
-- `ipconfig0`: IP configuration (default: "ip=dhcp")
-- `sshkeys`: SSH public keys (newline delimited)
-- `nameserver`: DNS nameserver
-- `searchdomain`: DNS search domain
-- `tags`: List of tags (default: [])
-- `onboot`: Start VM on boot (default: false)
-- `vm_state`: VM state - "running", "stopped", "started" (default: "running")
-- `agent`: Enable QEMU Guest Agent - 0 or 1 (default: 1)
-
-### Example: Full VM Configuration
-
-```hcl
-"production-db" = {
-  count       = 2
-  node        = "pvetop"
-  vmid_start  = 100
-  name        = "db-prod"
-  description = "Production database server"
-  cpu         = 4
-  memory      = 16384
-  disk_gb     = 100
-  disk_storage = "local-lvm"
-  disk_format  = "raw"
-  template     = "ubuntu-22.04-template"
-  full_clone   = true
-  network_bridge = "vmbr0"
-  network_model  = "virtio"
-  ciuser        = "admin"
-  cipassword    = "secure-password"
-  ipconfig0     = "ip=192.168.1.10/24,gw=192.168.1.1"
-  sshkeys       = "ssh-rsa AAAAB3NzaC1yc2E..."
-  nameserver    = "8.8.8.8"
-  searchdomain  = "example.com"
-  tags          = ["rack=top", "role=database", "env=production"]
-  onboot        = true
-  vm_state      = "running"
-  agent         = 1
-}
-```
-
-## Cloud-Init Configuration
-
-VMs are provisioned using cloud-init. Key points:
-
-1. **Template Required**: You must specify a `template` that is cloud-init ready
-2. **IP Configuration**: Use `ipconfig0` for network setup:
-   - DHCP: `"ip=dhcp"`
-   - Static: `"ip=192.168.1.50/24,gw=192.168.1.1"`
-3. **SSH Keys**: Provide SSH keys via `sshkeys` (newline delimited)
-4. **User**: Set `ciuser` for the cloud-init user
-
-## Network Configuration
-
-- **Bridge**: Default is `vmbr0`, override with `network_bridge`
-- **Model**: Default is `virtio` (best performance), can use `e1000` for compatibility
-- **IP**: Configure via cloud-init `ipconfig0` parameter
-
-## Tags
-
-Tags help organize and filter VMs in Proxmox:
-
-```hcl
-tags = ["rack=top", "role=webserver", "environment=production"]
-```
-
-Tags are stored as a list and converted to comma-separated format for Proxmox.
-
-## Autostart (onboot)
-
-Set `onboot = true` to start VMs automatically when the Proxmox node boots:
-
-```hcl
-onboot = true
-```
-
-## Common Commands
-
-### Single Rack
-
-```bash
-cd infra/racks/top-rack
-
-# Initialize
-terragrunt init
-
-# Plan changes
-terragrunt plan
-
-# Apply changes
-terragrunt apply
-
-# Destroy all VMs in rack
-terragrunt destroy
-
-# Show outputs
-terragrunt output
-```
-
-### All Racks
-
-```bash
-cd infra/racks
-
-# Initialize all
-terragrunt run-all init
-
-# Plan all
-terragrunt run-all plan
-
-# Apply all
-terragrunt run-all apply
-
-# Destroy all
-terragrunt run-all destroy
-```
-
-## Outputs
-
-The VM module provides outputs for each VM group:
-
-- `vm_ids`: List of VM IDs created
-- `vm_names`: List of VM names created
-- `vm_nodes`: List of nodes where VMs are running
-- `vm_ipv4_addresses`: List of IPv4 addresses (if agent enabled)
-- `vm_ipv6_addresses`: List of IPv6 addresses (if agent enabled)
-- `vms`: Map of VM details (id, name, node, ipv4, ipv6)
-
-Access outputs:
-
-```bash
-terragrunt output -json
-```
-
-## Troubleshooting
-
-### VM Creation Fails
-
-- **Check VMID conflicts**: Ensure `vmid_start` values don't overlap
-- **Verify template exists**: Template name must match an existing VM/template in Proxmox
-- **Check node availability**: Ensure target node exists and is accessible
-- **Verify storage**: Ensure storage pool exists and has space
-
-### Cloud-Init Not Working
-
-- **Template required**: Must specify a cloud-init ready template
-- **Check network**: Verify `ipconfig0` format is correct
-- **Verify storage**: Cloud-init drive needs storage space
-
-### Terragrunt Errors
-
-- **Check environment variables**: Ensure Proxmox credentials are set
-- **Verify Terragrunt version**: Use Terragrunt >= 0.40
-- **Check file paths**: Ensure `terragrunt.hcl` includes are correct
-
-### Terraform Cloud Issues
-
-- **Authentication**: Run `terraform login` to authenticate with Terraform Cloud
-- **Organization Access**: Ensure you have access to `solohomeserver-org` organization
-- **Workspace Creation**: Workspaces are auto-created on first `terragrunt init`
-- **State Locking**: If state is locked, check Terraform Cloud UI for running operations
-
-## Best Practices
-
-1. **VMID Planning**: Plan your VMID ranges to avoid conflicts:
-
-   - Top rack: 100-199
-   - Middle rack: 200-299
-   - Bottom rack: 300-399
-
-2. **Naming Convention**: Use descriptive names that indicate purpose:
-
-   - `web-main`, `api-cluster`, `db-primary`
-
-3. **Tags**: Use consistent tagging for filtering:
-
-   - `rack=top`, `role=webserver`, `environment=production`
-
-4. **Templates**: Create and maintain cloud-init ready templates
-
-5. **Version Control**: Keep `terragrunt.hcl` files in Git (never commit secrets)
-
-6. **State Management**: State is automatically managed in Terraform Cloud - no local state files
-
-## Provider Documentation
-
-- [Proxmox Terraform Provider](https://registry.terraform.io/providers/telmate/proxmox/latest/docs)
-- [Terragrunt Documentation](https://terragrunt.gruntwork.io/docs/)
-
-## Example: Complete Rack Configuration
-
-```hcl
-# infra/racks/top-rack/terragrunt.hcl
-include "root" {
-  path = find_in_parent_folders("terragrunt.hcl")
-}
-
-generate "main" {
-  path      = "main.tf"
-  if_exists = "overwrite_terragrunt"
-  contents  = <<EOF
-module "vms" {
-  source = "../../modules/vm"
-  for_each = var.vms
-  # ... (auto-generated)
-}
-EOF
-}
-
-inputs = {
-  vms = {
-    "webserver" = {
-      count      = 2
-      node       = "pvetop"
-      vmid_start = 200
-      name       = "web"
-      cpu        = 2
-      memory     = 4096
-      disk_gb    = 32
-      template   = "ubuntu-22.04-template"
-      ciuser     = "solomon"
-      ipconfig0  = "ip=dhcp"
-      tags       = ["rack=top", "role=webserver"]
-      onboot     = true
-    }
-    "database" = {
-      count      = 1
-      node       = "pvetop"
-      vmid_start = 250
-      name       = "db"
-      cpu        = 4
-      memory     = 8192
-      disk_gb    = 100
-      template   = "ubuntu-22.04-template"
-      ciuser     = "solomon"
-      ipconfig0  = "ip=192.168.1.10/24,gw=192.168.1.1"
-      tags       = ["rack=top", "role=database"]
-      onboot     = true
-    }
-  }
-}
-```
-
-This configuration will create:
-
-- 2 webserver VMs (web-0, web-1) with VMIDs 200, 201
-- 1 database VM (db) with VMID 250
+- Terraform Cloud remote state keeps locking and history out of the homelab, but local validation that initializes rack stacks requires Terraform Cloud auth.
+- The repository uses `telmate/proxmox ~> 2.9` because no `~> 3.0` provider release was available during validation. The module is written to the 2.9 schema.
+- Power state is not treated as authoritative desired state in this provider version. Use Proxmox or separate automation for day-to-day start/stop actions.
+- Rack files duplicate the generated module wiring for readability. A future refactor could extract a shared rack include once the fleet grows.
